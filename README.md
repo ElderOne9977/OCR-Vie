@@ -1,90 +1,118 @@
 # OCR-Vie
 
-OCR tiếng Việt/Anh từ ảnh, FastAPI và UI upload cục bộ. Python **3.11**, môi trường chuẩn `.venv311`.
+OCR-Vie giúp lấy văn bản tiếng Việt và tiếng Anh từ ảnh. Bạn có thể mở giao diện
+trên trình duyệt để chọn ảnh, xem kết quả, sao chép hoặc tải văn bản về dưới dạng
+file `.txt`. Dự án cũng có API để tích hợp vào ứng dụng khác.
 
-## Chạy trên Windows
+Ứng dụng chạy trên máy của bạn. Hai model PaddleOCR đã có sẵn trong repository;
+bạn cần cài thêm Python và Tesseract để sử dụng.
 
-Cài Python 3.11 và Tesseract có traineddata `vie`, `eng`; nếu binary nằm ngoài vị trí thông thường, đặt `TESSERACT_CMD`. Setup không tự cài binary hoặc tải model.
+## Cài đặt và chạy
+
+Hướng dẫn dưới đây dùng Windows và PowerShell.
+
+Trước tiên, cài **Python 3.11**, **Git** và **Tesseract OCR**. Khi cài Tesseract,
+hãy thêm dữ liệu ngôn ngữ tiếng Việt (`vie`) và tiếng Anh (`eng`). Mặc định ứng
+dụng tìm Tesseract tại `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+
+Mở PowerShell rồi chạy:
 
 ```powershell
-.\scripts\setup.ps1
-$env:ALLOW_MODEL_DOWNLOAD = 'false'
+git clone https://github.com/ElderOne9977/OCR-Vie.git
+cd OCR-Vie
+
 $env:MODELS_DIR = (Resolve-Path .\models).Path
+$env:ALLOW_MODEL_DOWNLOAD = 'false'
+.\scripts\setup.ps1
 .\scripts\run_local.ps1
 ```
 
-UI: http://127.0.0.1:8000 — API: http://127.0.0.1:8000/docs. Ctrl+C để dừng. `run_local.ps1` không cài/upgrade packages; `-Port 8002`, `-Reload` là tùy chọn. `-Warmup` nạp model **trong process server** và từ chối khởi động nếu pipeline không ready.
+Script setup tạo môi trường Python riêng tại `.venv311` và cài các thư viện cần
+thiết. Bạn chỉ cần chạy setup khi cài lần đầu hoặc khi dependencies thay đổi.
+Model đi kèm chiếm khoảng 92 MiB nên lần clone đầu có thể mất thêm thời gian.
 
-Repository kèm hai model PaddleOCR tại `models/official_models`; xem [model và giấy phép](models/README.md). Lệnh trên dùng bản model trong checkout, không cần tải lại weights. Tesseract và traineddata vẫn cần cài riêng.
+Sau khi server chạy, mở [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Để dừng ứng dụng, nhấn `Ctrl+C` trong cửa sổ PowerShell đang chạy server.
 
-Hybrid cần Paddle detector đã chuẩn bị offline. Cache mặc định: `%USERPROFILE%\.paddlex\official_models\PP-OCRv5_server_det`; nếu đặt `MODELS_DIR`, dùng `<MODELS_DIR>/official_models/<model>`. `PADDLE_PDX_CACHE_HOME` ưu tiên cao hơn. Artifact tối thiểu: `inference.pdiparams`, `inference.json` hoặc `inference.pdmodel`, `inference.yml`. Có thư mục không đồng nghĩa model nạp được.
+Ở những lần sử dụng tiếp theo, mở PowerShell tại thư mục dự án và chạy:
 
-Chỉ cần document/Tesseract: cài `requirements.txt`, `requirements-dev.txt` trong Python 3.11, đặt `OCR_SCENE_RECOGNIZER=tesseract`. Setup mặc định cài cả hybrid. Không cài đồng thời nhiều wheel OpenCV: PaddleX hiện yêu cầu `opencv-contrib-python==4.10.0.84`.
+```powershell
+$env:MODELS_DIR = (Resolve-Path .\models).Path
+$env:ALLOW_MODEL_DOWNLOAD = 'false'
+.\scripts\run_local.ps1
+```
 
-## Pipeline và giới hạn
+Nếu bạn cài Tesseract ở vị trí khác, đặt đường dẫn trước khi chạy setup hoặc server:
 
-| Lựa chọn | Đường chạy |
-| --- | --- |
-| Scene auto, `vie`/`vi` | Paddle detector → crop phối cảnh → Tesseract PSM 7 batch |
-| Scene auto, ngôn ngữ khác | Paddle detector → Paddle recognizer theo language |
-| Document auto | Tesseract toàn trang, mặc định grayscale/PSM 6 |
-| Explicit `paddle_tesseract` | Hybrid ở scene/document |
-| Explicit `tesseract` | Tesseract toàn ảnh |
-| Explicit `paddle_v5_latin` | Paddle, không tự chuyển engine khi thiếu model/charset |
+```powershell
+$env:TESSERACT_CMD = 'D:\Tesseract-OCR\tesseract.exe'
+```
 
-Model Latin hiện có thiếu ký tự tiếng Việt; explicit Paddle tiếng Việt trả `503 MODEL_LANGUAGE_UNSUPPORTED`. Không sửa charset bằng cách thêm dictionary không tương thích trọng số. Confidence 0–1 không phải xác suất đúng đã hiệu chỉnh. Legacy `/ocr`, `/ocr/data` giữ contract cũ; raw OCR không bị suy đoán sửa dấu/số.
+## Sử dụng
 
-Nhận PNG/JPG/WebP/BMP/TIFF, multipart field `file`. **Chưa hỗ trợ PDF, layout nhiều cột/bảng đáng tin cậy hoặc chữ viết tay.** Scene gom vùng cùng dòng theo overlap rồi đọc trái→phải, không phải bộ phân tích cột.
+Chọn ảnh, chọn ngôn ngữ rồi bấm **Nhận dạng văn bản**. Có thể giữ loại ảnh ở chế
+độ **Tự động**; nếu kết quả chưa tốt, hãy chọn **Tài liệu / trang in** hoặc
+**Ảnh thực tế / biển hiệu** phù hợp với ảnh của bạn.
 
-Mặc định: file 10 MiB, tổng body ≤ file cap + 64 KiB metadata, 12 triệu pixel, cạnh 8192, 256 vùng, 2 OCR đồng thời/process. Body vượt cap bị chặn khi đang đọc, trước khi spool hết multipart. `CPU_THREADS=10`, detector side 960, batch 32 giữ nguyên. `OCR_BUSY` trả 503 + Retry-After, không tạo hàng đợi. Typo route/recognizer/parser/response_format trả 422. Lỗi nội bộ được che, response có `X-Request-ID` để truy log.
+Ứng dụng nhận JPG, PNG, WebP, BMP và TIFF, mặc định tối đa 10 MiB mỗi ảnh. Lần
+nhận dạng đầu thường lâu hơn vì cần nạp model. Ảnh rõ nét, đủ sáng và không bị
+cắt chữ sẽ cho kết quả tốt hơn. Hãy kiểm tra lại dấu tiếng Việt, số tiền và mã số
+trước khi sử dụng kết quả.
 
-Deadline OCR 60 giây là cooperative; mỗi lần Tesseract tối đa 30 giây và dùng budget còn lại. Không ngắt tức thì native Paddle/model load. Timeout mạng/upload phải cấu hình ở gateway trước khi public. Nhiều Uvicorn worker nhân bản model/RAM và tăng admission tổng.
+Với ảnh thực tế tiếng Việt, PaddleOCR tìm các vùng chữ, sau đó Tesseract đọc
+từng vùng. Với trang tài liệu, Tesseract đọc toàn trang. Bạn nên giữ bộ nhận dạng
+ở chế độ **Tự động**: model Latin đi kèm chưa có đủ ký tự tiếng Việt.
 
-## Health và kiểm thử
+Hiện dự án chưa hỗ trợ PDF. Tài liệu nhiều cột, bảng phức tạp và chữ viết tay
+chưa được xử lý đáng tin cậy. Bộ mẫu đi kèm là ảnh tạo bằng phần mềm, nên kết quả
+kiểm thử trên bộ này chưa phản ánh đầy đủ chất lượng với ảnh thực tế.
 
-`/health/live`: HTTP 200 nếu process sống. `/health/ready`: **200 khi primary scene ready, 503 khi chưa ready**; cold `not_loaded` khác `load_failed`/`unavailable`. Health không nạp model. Document báo độc lập trong JSON; `/health` legacy vẫn 200 nhưng có thể `degraded`.
+## Gọi API
+
+Khi server đang chạy, mở [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+để xem các tham số và thử gửi ảnh trực tiếp.
+
+Ví dụ gửi ảnh từ PowerShell:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/v1/ocr?route=auto&lang=vie%2Beng" -F "file=@anh.png"
+```
+
+Thay `anh.png` bằng đường dẫn ảnh của bạn. API trả JSON có văn bản, các vùng chữ
+và thông tin xử lý. Nếu chỉ cần văn bản, dùng endpoint `/v1/ocr/text`.
+
+Bạn có thể kiểm tra server qua `/health/live`. Endpoint `/health/ready` cho biết
+pipeline ảnh thực tế đã sẵn sàng hay chưa; trước lần nạp model đầu tiên, endpoint
+này có thể trả HTTP 503 dù server vẫn đang chạy.
+
+## Phát triển và kiểm thử
+
+Mã ứng dụng nằm trong `app/`, tests trong `tests/`, còn `scripts/` chứa các lệnh
+cài đặt, chạy và kiểm tra. Thư mục `benchmarks/` cùng hai bộ `benchmark_data*`
+dùng để đánh giá OCR trên ảnh mẫu.
+
+Sau khi setup và đặt `MODELS_DIR` như ở trên, chạy bộ kiểm thử bằng:
 
 ```powershell
 .\scripts\test.ps1
-.\.venv311\Scripts\python.exe -m pytest -m 'not integration and not paddle' -q
-$env:OCR_REQUIRE_MODELS = '1'
-.\.venv311\Scripts\python.exe -m pytest tests/integration/test_paddle_scene_ocr.py::test_vietnamese_hybrid_strict -q
-.\.venv311\Scripts\python.exe scripts/smoke_test.py --base-url http://127.0.0.1:8000
 ```
 
-Strict integration/smoke yêu cầu model thật và chữ Việt đúng trên fixture cố định; 503/ảnh rỗng không được xem là pass. `smoke_test.py --allow-unavailable` chỉ chẩn đoán, **không là release gate**. Test không tự tải model. CI chưa cấu hình; kết quả test cục bộ không thay thế nghiệm thu triển khai.
+Khi nhập ảnh thật để đánh giá, chỉ dùng dữ liệu bạn có quyền sử dụng. Giữ ảnh
+riêng tư trong `benchmark_incoming/` hoặc `data/`, không commit chúng lên Git.
+Chỉ dùng các mẫu đã được kiểm tra nhãn để kết luận về chất lượng; bộ lọc
+`--reviewed-only` hỗ trợ việc này trong các lệnh benchmark.
 
-## Benchmark đúng phạm vi
+## Model và giấy phép
 
-```powershell
-.\.venv311\Scripts\python.exe -m benchmarks.validate_dataset --data benchmark_data_quality_v2
-.\.venv311\Scripts\python.exe -m benchmarks.run_scene_benchmark --data benchmark_data_quality_v2 --include-unreviewed --mode production --recognizer auto
-.\.venv311\Scripts\python.exe -m benchmarks.run_recognition_benchmark --data benchmark_data_quality_v2 --include-unreviewed --recognizer tesseract
-.\.venv311\Scripts\python.exe scripts/verify_ocr_performance.py --engine hybrid --repeats 30
-```
+Hai model nằm tại `models/official_models`: `PP-OCRv5_server_det` để phát hiện
+chữ và `latin_PP-OCRv5_mobile_rec` để nhận dạng chữ Latin. Các file model được
+giữ nguyên từ PaddleOCR, kèm model card dưới tên `MODEL_CARD.txt`.
 
-Scene production gọi router giống API; `--mode ablation` tách đường thử preprocess/engine cũ. Recognition là **GT-crop only**, không thay thế end-to-end. Polygon IoU mặc định OpenCV convex, `--iou-backend bbox` là metric khác; Shapely phải cài sẵn nếu yêu cầu polygon concave. Không fallback metric âm thầm. Field chỉ chấm khi region có `field_key` tồn tại trong `fields`; thiếu mapping báo null/coverage chưa đánh giá.
+Thông tin nguồn và giấy phép Apache-2.0 của model nằm trong
+[THIRD_PARTY_NOTICES.txt](models/THIRD_PARTY_NOTICES.txt) và
+[LICENSE-APACHE-2.0.txt](models/LICENSE-APACHE-2.0.txt). Giấy phép này áp dụng cho
+các thành phần PaddleOCR đi kèm; mã nguồn OCR-Vie chưa có giấy phép riêng.
 
-Manifest v2 hash ảnh thực và canonical GT. Freeze version không ghi đè; GT/ảnh thay đổi cần version mới. Annotator có kiểm tra revision để tránh tab cũ ghi đè, chỉ phục vụ ảnh trong dataset. Đọc [data/README.md](data/README.md) trước khi nhập dữ liệu riêng tư.
-
-Hai bộ hiện tại chỉ có 24 ảnh synthetic, **0 real reviewed test**: kết quả là preliminary, không chứng minh độ chính xác ngoài thực tế. Gate ban đầu cần ≥100 ảnh thật được phép sử dụng, có review và holdout.
-
-## Docker
-
-Dockerfile dùng hybrid/Python 3.11, non-root UID 10001, tải model bị tắt, warmup trong server. Mount cache `/models` có `official_models/PP-OCRv5_server_det` và quyền đọc/ghi cho UID này; không mount dataset riêng tư vào image.
-
-```powershell
-docker build -t ocr-vie .
-docker run --rm -p 127.0.0.1:8000:8000 -v C:/ocr-model-cache:/models ocr-vie
-```
-
-Thay đường dẫn mount bằng cache đã chuẩn bị. **Container chưa nghiệm thu**: Docker daemon đã hoạt động ngày 16/10; build/kiểm thử container vẫn cần hoàn tất. Không dùng hướng dẫn này như bằng chứng production-ready.
-
-## Tài liệu
-
-- [Kế hoạch cải thiện 16/10](docs/superpowers/plans/2026-10-16-project-improvements.md), [tiến độ thực hiện](docs/IMPLEMENTATION_RESULTS_2026-10-16.md)
-- [Kế hoạch và trạng thái](docs/superpowers/plans/2026-10-07-project-improvements.md)
-- [Kết quả triển khai](docs/IMPLEMENTATION_RESULTS_2026-10-07.md)
-- [Audit trước sửa](docs/PROJECT_AUDIT_2026-10-07.md)
-- [Demo cục bộ](DEMO.md), [lịch sử dự án](PROJECT_LOG.md)
-- [README lịch sử](docs/HISTORICAL_README_2026-10-07.md), [demo lịch sử](docs/HISTORICAL_DEMO_2026-10-07.md): chỉ để tra cứu, không dùng làm hướng dẫn chạy hiện hành.
+Repository giữ mã nguồn, tests, model và dữ liệu mẫu cần thiết. Môi trường Python,
+cache, kết quả chạy và tài liệu làm việc nội bộ được giữ ngoài Git. Dockerfile
+cũng có sẵn, nhưng quy trình chạy container chưa được kiểm thử đầy đủ.

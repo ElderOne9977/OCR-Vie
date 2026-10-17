@@ -11,8 +11,7 @@ venv/
 venv_broken/
 # Models / caches
 /models/*
-!/models/README.md
-!/models/THIRD_PARTY_NOTICES.md
+!/models/THIRD_PARTY_NOTICES.txt
 !/models/LICENSE-APACHE-2.0.txt
 !/models/official_models/
 /models/official_models/*
@@ -64,3 +63,9 @@ Thumbs.db
 !/benchmark_data_quality_v2/splits/
 /benchmark_data_quality_v2/images/*
 !/benchmark_data_quality_v2/images/synth_*.png
+
+# Keep working notes locally; README is the public entry point.
+*.md
+!/README.md
+/docs/
+/scripts/verify_tsv_performance.py

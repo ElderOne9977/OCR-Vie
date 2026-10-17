@@ -188,13 +188,6 @@ def test_dataset_json_privacy_gate_documented():
     assert meta.get("privacy_gate", {}).get("commit_required_privacy") == "safe"
 
 
-def test_dataset_readme_documents_privacy_gate():
-    text = (ROOT / "benchmark_data" / "README.md").read_text(encoding="utf-8")
-    assert "Privacy Gate" in text
-    assert "privacy" in text.lower()
-    assert "--reviewed-only" in text
-
-
 # ---- import duplicate protection ----
 
 def test_import_existing_hashes_dedup():

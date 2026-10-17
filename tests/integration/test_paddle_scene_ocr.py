@@ -37,17 +37,11 @@ def test_vietnamese_hybrid_strict():
 
 
 def _sample_scene() -> np.ndarray:
-    """Load data/sample_scene.png, or fall back to a synthetic image."""
-    from pathlib import Path
+    """Use the same text fixture on local machines and fresh checkouts."""
+    from app.preprocessing.common import decode_bytes_to_bgr
+    from scripts.smoke_test import _simple_png
 
-    root = Path(__file__).resolve().parents[2]
-    for name in ("sample_scene.png", "scene.png"):
-        p = root / "data" / name
-        if p.is_file():
-            from app.preprocessing.common import decode_bytes_to_bgr
-
-            return decode_bytes_to_bgr(p.read_bytes())
-    return np.zeros((200, 400, 3), dtype=np.uint8)
+    return decode_bytes_to_bgr(_simple_png())
 
 
 def test_detector_returns_polys():
