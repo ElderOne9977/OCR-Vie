@@ -1,0 +1,9 @@
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pytesseract==0.3.13
+pillow==12.3.0
+python-multipart==0.0.32
+# PaddleX 3.7.2 requires this build; install only one cv2 distribution.
+opencv-contrib-python==4.10.0.84
+numpy==2.3.5
+httpx==0.28.1

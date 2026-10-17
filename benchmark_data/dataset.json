@@ -1,0 +1,96 @@
+{
+  "name": "ocr-vie-benchmark",
+  "version": "0.3.1",
+  "created_at": "2026-10-03T12:00:00Z",
+  "updated_at": "2026-10-03T12:00:00Z",
+  "counts": {
+    "total": 12,
+    "by_source": {
+      "real": 0,
+      "synthetic": 12
+    },
+    "by_review": {
+      "unreviewed": 12,
+      "reviewed": 0,
+      "rejected": 0
+    },
+    "by_split": {
+      "train": 1,
+      "val": 3,
+      "test": 8
+    },
+    "by_category": {
+      "scene": 12
+    }
+  },
+  "git_hash": null,
+  "schema_version": "Phase 3.1",
+  "filters": {
+    "split": [
+      "train",
+      "val",
+      "test"
+    ],
+    "source": [
+      "real",
+      "synthetic"
+    ],
+    "review_status": [
+      "unreviewed",
+      "reviewed",
+      "rejected"
+    ]
+  },
+  "privacy_gate": {
+    "commit_required_privacy": "safe",
+    "private_dirs": [
+      "benchmark_incoming"
+    ],
+    "note": "Never commit benchmark_data/ without verifying all records have privacy=safe. Run: python benchmarks/import_images.py --privacy safe for approved data."
+  },
+  "build_tools": {
+    "generate": "scripts/generate_ocr_samples.py",
+    "import": "benchmarks/import_images.py",
+    "annotate": "benchmarks/annotate.py",
+    "validate": "benchmarks/validate_dataset.py",
+    "audit": "benchmarks/audit_annotations.py",
+    "summary": "benchmarks/dataset_summary.py",
+    "freeze": "benchmarks/freeze_testset.py"
+  },
+  "coverage_targets": {
+    "min_real_test_reviewed": 100,
+    "severe_below": 5,
+    "low_below": 10,
+    "flags_are_advisory": true,
+    "freeze_output": "benchmark_data/frozen/testset_v<version>.json",
+    "category_plan": [
+      "clean_print",
+      "screenshot",
+      "camera",
+      "signage",
+      "product_label",
+      "small_text",
+      "low_contrast",
+      "blur",
+      "jpeg_compression",
+      "perspective",
+      "rotation",
+      "complex_background",
+      "mixed_vi_en",
+      "diacritics_heavy",
+      "numeric_heavy",
+      "identifier_heavy"
+    ]
+  },
+  "benchmark_cli_flags": {
+    "--source": "Filter by real|synthetic (default=all)",
+    "--split": "Filter by train|val|test (default=all)",
+    "--reviewed-only": "Only review_status=='reviewed' (official quality reporting)",
+    "--include-unreviewed": "Keep unreviewed in output (no-op when reviewed_only=True)",
+    "--include-rejected": "Keep rejected records (default=false: drop rejected)"
+  },
+  "provenance": {
+    "venv": "Python 3.11.7 / Paddle 3.7.0 — no git repo (standalone copy)",
+    "note": "git_hash empty: not a git checkout; set manually after `git rev-parse HEAD` when versioned"
+  }
+}

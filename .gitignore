@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+# Venvs
+venv/
+.venv/
+.venv311/
+venv_broken/
+# Models / caches
+/models/*
+!/models/README.md
+!/models/THIRD_PARTY_NOTICES.md
+!/models/LICENSE-APACHE-2.0.txt
+!/models/official_models/
+/models/official_models/*
+!/models/official_models/PP-OCRv5_server_det/
+!/models/official_models/latin_PP-OCRv5_mobile_rec/
+.paddlex/
+# Benchmark outputs
+benchmark_results/
+# Privacy gates: private benchmark data (never commit without privacy=safe)
+benchmark_incoming/
+benchmark_data/dataset_summary.json
+benchmark_data/audit_report.txt
+benchmark_data/coverage_report.json
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+# Local inputs, generated results and scratch files stay on this machine.
+/artifacts/
+/data/*
+!/data/README.md
+/.superpowers/
+/.agents/
+/.codex/
+/.aws/
+**/_tmp*
+**/ _tmp*
+*.log
+*.zip
+*.pem
+*.key
+# Publish only the synthetic fixture layout.
+/benchmark_data/*
+!/benchmark_data/README.md
+!/benchmark_data/annotations.jsonl
+!/benchmark_data/dataset.json
+!/benchmark_data/images/
+!/benchmark_data/splits/
+/benchmark_data/images/*
+!/benchmark_data/images/synth_*.png
+/benchmark_data_quality_v2/*
+!/benchmark_data_quality_v2/README.md
+!/benchmark_data_quality_v2/annotations.jsonl
+!/benchmark_data_quality_v2/images/
+!/benchmark_data_quality_v2/splits/
+/benchmark_data_quality_v2/images/*
+!/benchmark_data_quality_v2/images/synth_*.png

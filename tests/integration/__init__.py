@@ -1,0 +1,1 @@
+"""Integration tests (real Paddle inference). Skipped unless -m integration."""

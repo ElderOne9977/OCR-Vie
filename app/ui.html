@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F7F6F3">
+  <meta name="description" content="OCR-Vie: nhận dạng chữ tiếng Việt và tiếng Anh từ ảnh, sao chép và tải văn bản.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='5' fill='%232F3437'/%3E%3Cpath d='M7 8v12h5M21 20V8h-5M11 12h6M11 16h6' fill='none' stroke='%23F7F6F3' stroke-width='2'/%3E%3C/svg%3E">
+  <title>OCR-Vie · Từ ảnh sang văn bản</title>
+  <style>
+    :root { color-scheme: light; --canvas: #F7F6F3; --ink: #2F3437; --muted: #686762; --line: #EAEAEA; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; min-height: 100dvh; background: var(--canvas); color: var(--ink); font-family: 'SF Pro Display', 'Geist Sans', 'Helvetica Neue', 'Segoe UI', sans-serif; line-height: 1.6; }
+    button, select, input { font: inherit; }
+    button, select, summary, .upload-label { -webkit-tap-highlight-color: transparent; }
+    button { border: 1px solid var(--line); border-radius: 6px; padding: 9px 14px; background: #FFF; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 150ms, transform 150ms; }
+    button:hover:not(:disabled) { background: #F7F6F3; }
+    button:active:not(:disabled) { transform: scale(.98); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    :focus-visible { outline: 2px solid #346538; outline-offset: 4px; }
+    a { color: inherit; text-underline-offset: 4px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .skip-link { position: fixed; top: 8px; left: 8px; padding: 8px 16px; background: #FFF; z-index: 5; transform: translateY(-150%); }
+    .skip-link:focus { transform: none; }
+    .shell { max-width: 1240px; margin: auto; padding: 0 36px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; gap: 10px; align-items: center; font-size: 19px; font-weight: 650; letter-spacing: -.04em; }
+    .brand svg { width: 28px; height: 28px; }
+    .topbar a { font-size: 13px; color: var(--muted); }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 38px 0 28px; }
+    .eyebrow, .step { font-family: 'Geist Mono', 'SF Mono', Consolas, monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+    .eyebrow { color: var(--muted); margin: 0 0 8px; }
+    h1 { font-family: 'Lyon Text', 'Newsreader', Georgia, serif; font-size: clamp(30px, 3.5vw, 43px); line-height: 1.15; font-weight: 500; letter-spacing: -.035em; margin: 0 0 10px; text-wrap: balance; }
+    .intro > div > p:last-child { margin: 0; color: var(--muted); font-size: 14px; max-width: 65ch; }
+    .health { font-size: 12px; max-width: 290px; color: var(--muted); margin: 0 0 4px; padding-left: 14px; border-left: 3px solid #D8D7D1; }
+    .health[data-state="ready"] { border-color: #6A8D6A; }
+    .health[data-state="warning"] { border-color: #B49A52; }
+    .workspace { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(0, 1.35fr); gap: 20px; align-items: start; }
+    .panel { background: #FFF; border: 1px solid #EAEAEA; border-radius: 12px; min-width: 0; overflow: hidden; animation: enter 500ms both; }
+    .output { animation-delay: 80ms; }
+    .panel-heading { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+    .step { display: grid; place-items: center; width: 28px; height: 28px; background: #F7F6F3; border-radius: 4px; color: var(--muted); }
+    h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+    .panel-body { padding: 24px; }
+    .upload { position: relative; border: 1px solid #EAEAEA; border-radius: 8px; background: #FBFBFA; }
+    .upload:focus-within { outline: 2px solid #346538; outline-offset: 3px; }
+    .upload-label { display: flex; flex-direction: column; align-items: center; padding: 26px 16px; cursor: pointer; gap: 6px; }
+    .upload-label:hover { background: #F7F6F3; }
+    .upload[data-selected="true"] .upload-label { padding: 12px 16px; }
+    .upload-label svg { width: 34px; height: 34px; margin-bottom: 7px; }
+    .upload-label strong { font-size: 14px; font-weight: 600; }
+    .upload-label span { font-size: 12px; color: var(--muted); }
+    #preview { width: 100%; max-height: 300px; object-fit: contain; display: block; padding: 14px; background: #F7F6F3; border-bottom: 1px solid var(--line); }
+    .file-info { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0 0; }
+    #file-name { overflow-wrap: anywhere; font-size: 13px; font-weight: 600; margin: 0; }
+    #file-size, .hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+    #remove-btn { flex-shrink: 0; font-size: 12px; padding: 6px 10px; }
+    .fields { display: grid; gap: 16px; margin-top: 24px; }
+    label.field-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #EAEAEA; border-radius: 6px; background: #FFF; color: var(--ink); font-size: 13px; }
+    details { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; }
+    summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+    details .field-label { margin-top: 14px; }
+    .primary { width: 100%; margin-top: 24px; min-height: 46px; background: #111; color: #FFF; border-color: #111; }
+    .primary:hover:not(:disabled) { background: #333; }
+    #status { font-size: 13px; margin: 12px 0 0; overflow-wrap: anywhere; }
+    #status:empty { display: none; }
+    #status[data-state="error"] { color: #9F2F2D; background: #FDEBEC; border-radius: 6px; padding: 10px 12px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    #result-badge { font-size: 11px; padding: 3px 9px; border-radius: 9999px; background: #F7F6F3; color: var(--muted); }
+    #result-badge[data-state="success"] { background: #EDF3EC; color: #346538; }
+    #result-badge[data-state="error"] { background: #FDEBEC; color: #9F2F2D; }
+    #result-badge[data-state="busy"] { background: #FBF3DB; color: #76520B; }
+    #copy-feedback { font-size: 12px; color: #346538; }
+    .result-body { padding: 28px; min-height: 440px; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 380px; }
+    .empty-state svg { width: 64px; height: 80px; margin-bottom: 22px; }
+    .empty-state h3 { font-size: 16px; font-weight: 500; margin: 0 0 6px; }
+    .empty-state p { font-size: 13px; color: var(--muted); max-width: 32ch; margin: 0; }
+    #result-meta { font-family: 'Geist Mono', 'SF Mono', Consolas, monospace; color: var(--muted); font-size: 11px; margin: 0 0 20px; font-variant-numeric: tabular-nums; }
+    #ocr-text { white-space: pre-wrap; word-break: break-word; font-size: 16px; line-height: 1.85; }
+    #ocr-text.empty { color: var(--muted); }
+    #warning { color: #76520B; background: #FBF3DB; padding: 10px 12px; font-size: 13px; border-radius: 6px; margin: 20px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    #tech-details { margin-top: 28px; }
+    #debug-json { white-space: pre-wrap; word-break: break-word; font: 11px/1.65 Consolas, monospace; padding: 16px; background: #F7F6F3; max-height: 280px; overflow: auto; }
+    footer { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 12px; padding: 24px 0 32px; }
+    @keyframes enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @media (max-width: 760px) {
+      .shell { padding: 0 18px; } .intro { display: block; padding-top: 28px; }
+      .health { margin-top: 20px; max-width: none; } .workspace { grid-template-columns: minmax(0, 1fr); }
+      .panel-body, .panel-heading, .toolbar { padding: 20px; } .result-body { padding: 20px; min-height: 300px; }
+      .empty-state { min-height: 250px; } footer { flex-direction: column; gap: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Đến vùng nhận dạng</a>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect width="28" height="28" rx="5" fill="#2F3437"/><path d="M7 8v12h5M21 20V8h-5M11 12h6M11 16h6" stroke="#F7F6F3" stroke-width="2"/></svg>OCR-Vie</div>
+      <a href="/docs" target="_blank" rel="noopener">Tài liệu API ↗</a>
+    </header>
+    <section class="intro" aria-labelledby="page-title">
+      <div><p class="eyebrow">Không gian nhận dạng văn bản</p><h1 id="page-title">Từ ảnh sang văn bản.</h1><p>Đọc chữ tiếng Việt và tiếng Anh. Sao chép hoặc lưu kết quả để dùng tiếp.</p></div>
+      <p id="health" class="health" role="status">Đang kiểm tra dịch vụ…</p>
+    </section>
+    <main id="workspace" class="workspace" tabindex="-1">
+      <section class="panel" aria-labelledby="source-title">
+        <div class="panel-heading"><span class="step" aria-hidden="true">01</span><h2 id="source-title">Ảnh nguồn</h2></div>
+        <form id="ocr-form" class="panel-body">
+          <div id="upload-zone" class="upload">
+            <img id="preview" alt="Ảnh nguồn được chọn để nhận dạng" hidden>
+            <label for="file" class="upload-label">
+              <span id="upload-icon" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><rect x="4" y="5" width="28" height="26" rx="4" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3" fill="currentColor"/><path d="m6 27 9-9 6 6 5-5 5 8" stroke="currentColor" stroke-width="2"/></svg></span>
+              <strong id="choose-label">Chọn ảnh từ thiết bị</strong><span>JPG, PNG, WebP, BMP hoặc TIFF</span>
+            </label>
+            <input id="file" name="file" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff" aria-describedby="upload-hint" data-max-bytes="__MAX_UPLOAD_BYTES__" required>
+          </div>
+          <p id="upload-hint" class="hint">Chọn ảnh rõ nét, đủ sáng và không bị cắt chữ.</p>
+          <div id="file-info" class="file-info" hidden><div><p id="file-name"></p><p id="file-size"></p></div><button id="remove-btn" type="button">Bỏ ảnh</button></div>
+          <p id="preview-note" class="hint" hidden>Trình duyệt không xem trước được ảnh này. Bạn vẫn có thể nhận dạng.</p>
+          <div class="fields">
+            <div><label for="route" class="field-label">Loại ảnh</label><select id="route" aria-describedby="route-hint"><option value="auto" selected>Tự động chọn</option><option value="scene">Ảnh thực tế / biển hiệu</option><option value="document">Tài liệu / trang in</option></select><p id="route-hint" class="hint">Không chắc loại ảnh? Giữ lựa chọn tự động.</p></div>
+            <div><label for="lang" class="field-label">Ngôn ngữ văn bản</label><select id="lang"><option value="vie+eng" selected>Tiếng Việt + tiếng Anh</option><option value="vie">Tiếng Việt</option><option value="eng">Tiếng Anh</option></select></div>
+          </div>
+          <details id="advanced"><summary>Tùy chọn nâng cao</summary>
+            <label for="recognizer" class="field-label">Bộ nhận dạng</label>
+            <select id="recognizer" aria-describedby="engine-hint"><option value="auto" selected>Tự động (khuyến nghị)</option><option value="paddle_tesseract">Paddle phát hiện + Tesseract tiếng Việt</option><option value="tesseract">Tesseract toàn ảnh</option><option value="paddle_v5_latin">PP-OCRv5 Latin</option></select>
+            <p id="engine-hint" class="hint">Scene tiếng Việt: Paddle + Tesseract. Tài liệu: Tesseract. PP-OCRv5 Latin cần model đủ ký tự cho ngôn ngữ đã chọn.</p>
+          </details>
+          <button id="submit-btn" class="primary" type="submit" disabled>Nhận dạng văn bản →</button>
+          <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
+        </form>
+      </section>
+      <section class="panel output" aria-labelledby="result-title" aria-busy="false" id="output-panel">
+        <div class="panel-heading"><span class="step" aria-hidden="true">02</span><h2 id="result-title">Văn bản trích xuất</h2></div>
+        <div class="toolbar"><span id="result-badge">Chưa có kết quả</span><div class="actions"><button id="copy-btn" type="button" disabled>Sao chép văn bản</button><button id="download-btn" type="button" disabled>Tải .txt</button></div><span id="copy-feedback" role="status" aria-live="polite"></span></div>
+        <div class="result-body">
+          <div id="empty-state" class="empty-state"><svg viewBox="0 0 64 80" fill="none" aria-hidden="true"><path d="M12 3h27l13 13v60H12z" fill="#F7F6F3" stroke="#D8D7D1" stroke-width="1.5"/><path d="M39 3v14h13M22 31h20M22 40h20M22 49h14" stroke="#98978E" stroke-width="2"/></svg><h3 id="empty-title">Văn bản sẽ xuất hiện ở đây</h3><p id="empty-hint">Chọn một ảnh, rồi bắt đầu nhận dạng.</p></div>
+          <div id="result-container" hidden><p id="result-meta"></p><div id="ocr-text" tabindex="0" aria-label="Văn bản nhận dạng"></div><p id="warning" hidden></p><details id="tech-details"><summary>Chi tiết kỹ thuật</summary><pre id="debug-json"></pre></details></div>
+        </div>
+      </section>
+    </main>
+    <footer><span>Mẹo: ảnh thẳng, chữ lớn và ít lóa giúp nhận dạng tốt hơn.</span><span>OCR-Vie / Vietnamese OCR</span></footer>
+    <noscript>Giao diện cần JavaScript. Bạn có thể sử dụng API tại /docs.</noscript>
+  </div>
+  <script>
+    const $ = id => document.getElementById(id);
+    const fileEl = $("file"), previewEl = $("preview"), statusEl = $("status"), healthEl = $("health");
+    const copyBtn = $("copy-btn"), downloadBtn = $("download-btn"), copyFeedback = $("copy-feedback");
+    let lastCleanText = "", previewURL = "", busy = false;
+    let copyTimer;
+
+    function cleanDisplayText(t) {
+      return (t || "").replace(/\r\n?/g, "\n").split("\n").map(l => l.replace(/[ \t]+$/, "")).join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+    }
+    function resetResult() {
+      lastCleanText = "";
+      copyBtn.disabled = downloadBtn.disabled = true;
+      copyFeedback.textContent = "";
+      clearTimeout(copyTimer);
+      $("result-container").hidden = true;
+      $("empty-state").hidden = false;
+      $("empty-title").textContent = "Văn bản sẽ xuất hiện ở đây";
+      $("empty-hint").textContent = "Chọn một ảnh, rồi bắt đầu nhận dạng.";
+      $("result-badge").textContent = "Chưa có kết quả";
+      $("result-badge").dataset.state = "";
+      $("warning").hidden = true;
+      $("tech-details").open = false;
+      $("debug-json").textContent = $("ocr-text").textContent = $("result-meta").textContent = "";
+    }
+    function refreshFile() {
+      if (busy) return;
+      if (previewURL) URL.revokeObjectURL(previewURL);
+      previewURL = "";
+      previewEl.hidden = true;
+      previewEl.removeAttribute("src");
+      $("preview-note").hidden = true;
+      resetResult();
+      statusEl.textContent = "";
+      statusEl.dataset.state = "";
+      const file = fileEl.files[0];
+      const max = Number(fileEl.dataset.maxBytes);
+      if (file && (!file.size || file.size > max)) {
+        statusEl.textContent = !file.size ? "Ảnh đang trống. Hãy chọn một ảnh khác." : "Ảnh quá lớn. Giới hạn tải lên là " + (max / 1048576).toLocaleString("vi-VN") + " MB.";
+        statusEl.dataset.state = "error";
+        fileEl.value = "";
+      }
+      const selected = fileEl.files[0];
+      $("submit-btn").disabled = !selected;
+      $("file-info").hidden = !selected;
+      $("upload-zone").dataset.selected = String(!!selected);
+      $("upload-icon").hidden = !!selected;
+      $("choose-label").textContent = selected ? "Chọn ảnh khác" : "Chọn ảnh từ thiết bị";
+      if (!selected) return;
+      $("file-name").textContent = selected.name;
+      $("file-size").textContent = (selected.size / 1024).toLocaleString("vi-VN", {maximumFractionDigits: 1}) + " KB";
+      previewURL = URL.createObjectURL(selected);
+      previewEl.src = previewURL;
+      previewEl.hidden = false;
+    }
+    fileEl.addEventListener("change", refreshFile);
+    previewEl.addEventListener("error", () => { previewEl.hidden = true; $("preview-note").hidden = false; });
+    $("remove-btn").addEventListener("click", () => { if (!busy) { fileEl.value = ""; refreshFile(); fileEl.focus(); } });
+    window.addEventListener("pagehide", () => { if (previewURL) URL.revokeObjectURL(previewURL); });
+    const maxBytes = Number(fileEl.dataset.maxBytes);
+    if (maxBytes) $("upload-hint").textContent = "Tối đa " + (maxBytes / 1048576).toLocaleString("vi-VN") + " MB / ảnh. Chọn ảnh rõ nét, đủ sáng.";
+
+    async function checkHealth() {
+      try {
+        const response = await fetch("/health/ready");
+        if (!response.ok && response.status !== 503) throw new Error("health");
+        const h = await response.json();
+        const scene = h.primary_scene_pipeline?.status, doc = h.primary_document_pipeline?.status;
+        healthEl.dataset.state = scene === "ready" ? "ready" : "warning";
+        healthEl.textContent = scene === "ready" ? "Dịch vụ nhận dạng sẵn sàng." : scene === "not_loaded" ? "Model ảnh thực tế sẽ khởi tạo khi cần." : "Nhận dạng ảnh thực tế chưa sẵn sàng.";
+        if (doc === "ready" && scene !== "ready") healthEl.textContent += " Tài liệu sẵn sàng.";
+      } catch {
+        healthEl.dataset.state = "warning";
+        healthEl.textContent = "Chưa kiểm tra được dịch vụ. Bạn có thể thử nhận dạng.";
+      }
+    }
+    checkHealth();
+
+    copyBtn.addEventListener("click", async () => {
+      if (!lastCleanText || busy) return;
+      clearTimeout(copyTimer);
+      try {
+        await navigator.clipboard.writeText(lastCleanText);
+        copyFeedback.textContent = "Đã sao chép";
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = lastCleanText;
+        ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { copyFeedback.textContent = document.execCommand("copy") ? "Đã sao chép" : "Không sao chép được. Hãy chọn văn bản hoặc tải .txt."; }
+        catch { copyFeedback.textContent = "Không sao chép được. Hãy tải .txt."; }
+        finally { ta.remove(); copyBtn.focus(); }
+      }
+      copyTimer = setTimeout(() => { copyFeedback.textContent = ""; }, 5000);
+    });
+    downloadBtn.addEventListener("click", () => {
+      if (!lastCleanText || busy) return;
+      const blob = new Blob([lastCleanText], {type: "text/plain;charset=utf-8"});
+      const url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = "ocr.txt";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    function errorMessage(status, data, retryAfter) {
+      const code = data?.detail?.code;
+      if (code === "OCR_BUSY") {
+        const seconds = Number(retryAfter);
+        const wait = Number.isFinite(seconds) && seconds > 0 ? Math.min(120, Math.ceil(seconds)) : 1;
+        return "Dịch vụ đang bận. Vui lòng thử lại sau " + wait + " giây.";
+      }
+      if (status === 413) return "Ảnh quá lớn. Hãy giảm kích thước hoặc chọn ảnh khác.";
+      if (status === 429) return "Dịch vụ đang bận. Vui lòng thử lại sau ít giây.";
+      if (status === 504) return "Ảnh xử lý quá lâu. Hãy cắt phần chứa chữ hoặc giảm kích thước rồi thử lại.";
+      if (code === "MODEL_LANGUAGE_UNSUPPORTED") return "Model này chưa đủ ký tự tiếng Việt hoặc ngôn ngữ đã chọn. Hãy chọn bộ nhận dạng Tự động.";
+      if (status === 503) return "Bộ nhận dạng chưa sẵn sàng. Thử lựa chọn Tự động hoặc kiểm tra cấu hình dịch vụ.";
+      if (status === 400 || status === 422) return "Không đọc được ảnh hoặc tùy chọn chưa hợp lệ. Hãy chọn ảnh JPG/PNG khác và thử lại.";
+      return "Không thể nhận dạng văn bản. Hãy thử lại hoặc xem chi tiết kỹ thuật.";
+    }
+    $("ocr-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const file = fileEl.files[0];
+      if (busy || !file) return;
+      const query = new URLSearchParams({route: $("route").value, recognizer: $("recognizer").value, lang: $("lang").value});
+      const fd = new FormData(); fd.append("file", file);
+      busy = true;
+      resetResult();
+      for (const id of ["file", "route", "lang", "recognizer", "remove-btn", "submit-btn"]) $(id).disabled = true;
+      $("output-panel").setAttribute("aria-busy", "true");
+      $("submit-btn").textContent = "Đang nhận dạng…";
+      statusEl.dataset.state = "";
+      statusEl.textContent = "Đang xử lý ảnh. Lần đầu có thể lâu hơn do khởi tạo model.";
+      $("empty-title").textContent = "Đang đọc văn bản trong ảnh";
+      $("empty-hint").textContent = "Vui lòng giữ trang này mở trong khi xử lý.";
+      $("result-badge").textContent = "Đang xử lý";
+      $("result-badge").dataset.state = "busy";
+      const controller = new AbortController();
+      const requestTimeout = Number('__REQUEST_TIMEOUT_MS__') || 120000;
+      const timer = setTimeout(() => controller.abort(), requestTimeout);
+      try {
+        const response = await fetch("/v1/ocr?" + query, {method: "POST", body: fd, signal: controller.signal});
+        const data = await response.json();
+        $("debug-json").textContent = JSON.stringify(data, null, 2);
+        if (!response.ok) throw new Error(errorMessage(response.status, data, response.headers?.get("Retry-After")));
+        if (data.success !== true || typeof data.text !== "string") throw new Error("Dịch vụ trả về kết quả không hợp lệ. Hãy thử lại.");
+        lastCleanText = cleanDisplayText(data.text);
+        $("ocr-text").textContent = lastCleanText || "Không phát hiện văn bản.";
+        $("ocr-text").classList.toggle("empty", !lastCleanText);
+        copyBtn.disabled = downloadBtn.disabled = !lastCleanText;
+        $("result-badge").textContent = lastCleanText ? "Hoàn tất" : "Không tìm thấy chữ";
+        $("result-badge").dataset.state = lastCleanText ? "success" : "";
+        statusEl.textContent = lastCleanText ? "Nhận dạng xong. Hãy kiểm tra lại dấu và số trước khi sử dụng." : "Không tìm thấy chữ. Thử ảnh rõ hơn hoặc chọn đúng loại ảnh.";
+        const ms = data.timing_ms?.total;
+        $("result-meta").textContent = (data.route?.route === "document" ? "TÀI LIỆU" : "ẢNH THỰC TẾ") + (Number.isFinite(ms) ? " · " + (ms / 1000).toLocaleString("vi-VN", {maximumFractionDigits: 2}) + " giây" : "") + " · " + (Array.isArray(data.regions) ? data.regions.length : 0) + " vùng chữ";
+        const warnings = Array.isArray(data.warnings) ? [...new Set(data.warnings.map(w => {
+          if (typeof w === "string" && w.startsWith("classifier_low_confidence:")) return "Chưa xác định chắc loại ảnh. Nếu kết quả chưa tốt, hãy chọn loại ảnh và nhận dạng lại.";
+          return "Có cảnh báo trong quá trình xử lý. Hãy kiểm tra kết quả và xem Chi tiết kỹ thuật.";
+        }))] : [];
+        if (data.fallback_used) warnings.unshift("Đã sử dụng bộ nhận dạng dự phòng. Hãy kiểm tra kỹ kết quả.");
+        $("warning").hidden = !warnings.length;
+        $("warning").textContent = warnings.join("\n");
+        checkHealth();
+      } catch (err) {
+        lastCleanText = "";
+        copyBtn.disabled = downloadBtn.disabled = true;
+        statusEl.dataset.state = "error";
+        statusEl.textContent = err.name === 'AbortError' ? "Chờ phản hồi quá lâu. Ảnh được giữ lại; máy chủ có thể vẫn đang xử lý. Hãy thử lại sau." : err instanceof TypeError || err instanceof SyntaxError ? "Không kết nối được dịch vụ hoặc phản hồi không hợp lệ. Kiểm tra kết nối rồi thử lại." : err.message;
+        $("ocr-text").textContent = "Không thể nhận dạng văn bản.";
+        $("ocr-text").classList.add("empty");
+        $("result-badge").textContent = "Chưa hoàn tất";
+        $("result-badge").dataset.state = "error";
+        if (!$("debug-json").textContent) $("debug-json").textContent = String(err);
+      } finally {
+        clearTimeout(timer);
+        busy = false;
+        for (const id of ["file", "route", "lang", "recognizer", "remove-btn", "submit-btn"]) $(id).disabled = false;
+        $("output-panel").setAttribute("aria-busy", "false");
+        $("submit-btn").textContent = "Nhận dạng văn bản →";
+        $("empty-state").hidden = true;
+        $("result-container").hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>

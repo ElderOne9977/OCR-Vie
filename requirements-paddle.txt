@@ -1,0 +1,12 @@
+# Canonical OCR runtime: Python 3.11 (see README/PROJECT_LOG).
+# Python 3.14 currently has no paddlepaddle cp314 wheel — use .venv311.
+# Install only inside .venv311: .venv311\Scripts\python -m pip install -r requirements-paddle.txt
+# Keep lazy imports so app still starts without these (MODEL_UNAVAILABLE).
+-r requirements.txt
+paddlepaddle==3.2.0
+paddleocr==3.7.0
+# paddleocr 3.7.0 pulls paddlex[ocr-core]>=3.7.0,<3.8.0 transitively;
+# pin paddlex to latest 3.7.x verified via PyPI (3.7.2).
+paddlex==3.7.2
+# PaddleX OCR deps (pulled via paddlex[ocr-core] but listed for clarity).
+# Do not add new deps without verifying wheel exists for cp311.
