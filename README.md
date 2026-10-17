@@ -1,118 +1,183 @@
 # OCR-Vie
 
-OCR-Vie giúp lấy văn bản tiếng Việt và tiếng Anh từ ảnh. Bạn có thể mở giao diện
-trên trình duyệt để chọn ảnh, xem kết quả, sao chép hoặc tải văn bản về dưới dạng
-file `.txt`. Dự án cũng có API để tích hợp vào ứng dụng khác.
+A local OCR application for Vietnamese and English. Choose an image in your browser, extract its text, and copy the result or download it as a plain text file.
 
-Ứng dụng chạy trên máy của bạn. Hai model PaddleOCR đã có sẵn trong repository;
-bạn cần cài thêm Python và Tesseract để sử dụng.
+The project combines PaddleOCR text detection, Tesseract recognition, and a FastAPI server. Image processing runs on your computer; the browser provides the upload and results interface. Internet access is needed to clone the repository and install dependencies. The two PaddleOCR models are included in Git.
 
-## Cài đặt và chạy
+## How it works
 
-Hướng dẫn dưới đây dùng Windows và PowerShell.
+```text
+Scene image → PaddleOCR detection → Text crops → Tesseract → Text
+Document    → Page preprocessing → Tesseract              → Text
+```
 
-Trước tiên, cài **Python 3.11**, **Git** và **Tesseract OCR**. Khi cài Tesseract,
-hãy thêm dữ liệu ngôn ngữ tiếng Việt (`vie`) và tiếng Anh (`eng`). Mặc định ứng
-dụng tìm Tesseract tại `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+These are the default paths for Vietnamese text. Other languages and explicit engine selections can use a different path.
 
-Mở PowerShell rồi chạy:
+- **Automatic routing:** a heuristic chooses between scene and document processing. You can select the image type yourself if the automatic choice gives poor results.
+- **Vietnamese scene text:** PaddleOCR locates text regions, and Tesseract reads the cropped lines. This is useful for signs, labels, and photographs containing text.
+- **Document recognition:** Tesseract reads the whole page, with grayscale preprocessing by default.
+- **Browser workspace:** preview the selected image, choose the language, inspect the result, and copy or export the text.
+- **HTTP API:** send an image from another application and receive text, detected regions, and processing details.
+
+The current interface uses Vietnamese labels. The bundled Latin recognizer does not cover the full Vietnamese character set, so keep the recognizer on **Automatic** for Vietnamese images.
+
+## What you need
+
+The launch scripts target **Windows and PowerShell**, using **Python 3.11**. The default configuration runs inference on the CPU and does not require a dedicated GPU.
+
+You will also need:
+
+- Git and Python 3.11, including the Windows `py` launcher.
+- Tesseract OCR with the Vietnamese (`vie`) and English (`eng`) language data installed.
+- Disk space for the Python environment and dependencies, in addition to the roughly 92 MiB of bundled model weights.
+- A browser to use the interface. Node.js is optional; some interface regression tests use it.
+
+The Python setup script installs the wrapper for Tesseract, but does not install the Tesseract executable or its language data.
+
+## Setup
+
+### 1. Clone the project
 
 ```powershell
 git clone https://github.com/ElderOne9977/OCR-Vie.git
 cd OCR-Vie
-
-$env:MODELS_DIR = (Resolve-Path .\models).Path
-$env:ALLOW_MODEL_DOWNLOAD = 'false'
-.\scripts\setup.ps1
-.\scripts\run_local.ps1
 ```
 
-Script setup tạo môi trường Python riêng tại `.venv311` và cài các thư viện cần
-thiết. Bạn chỉ cần chạy setup khi cài lần đầu hoặc khi dependencies thay đổi.
-Model đi kèm chiếm khoảng 92 MiB nên lần clone đầu có thể mất thêm thời gian.
+The model weights are stored in regular Git, so cloning also downloads them. There is no separate model download step for the default Vietnamese pipeline.
 
-Sau khi server chạy, mở [http://127.0.0.1:8000](http://127.0.0.1:8000).
-Để dừng ứng dụng, nhấn `Ctrl+C` trong cửa sổ PowerShell đang chạy server.
+### 2. Install Tesseract and its languages
 
-Ở những lần sử dụng tiếp theo, mở PowerShell tại thư mục dự án và chạy:
+Install Tesseract OCR and include both the Vietnamese and English language packs. The application checks the usual Windows installation path:
 
-```powershell
-$env:MODELS_DIR = (Resolve-Path .\models).Path
-$env:ALLOW_MODEL_DOWNLOAD = 'false'
-.\scripts\run_local.ps1
+```text
+C:\Program Files\Tesseract-OCR\tesseract.exe
 ```
 
-Nếu bạn cài Tesseract ở vị trí khác, đặt đường dẫn trước khi chạy setup hoặc server:
+If your installation is elsewhere, set its location in PowerShell before running setup or starting the server:
 
 ```powershell
 $env:TESSERACT_CMD = 'D:\Tesseract-OCR\tesseract.exe'
 ```
 
-## Sử dụng
+Replace the example path with the location of your own executable.
 
-Chọn ảnh, chọn ngôn ngữ rồi bấm **Nhận dạng văn bản**. Có thể giữ loại ảnh ở chế
-độ **Tự động**; nếu kết quả chưa tốt, hãy chọn **Tài liệu / trang in** hoặc
-**Ảnh thực tế / biển hiệu** phù hợp với ảnh của bạn.
+### 3. Install the Python dependencies
 
-Ứng dụng nhận JPG, PNG, WebP, BMP và TIFF, mặc định tối đa 10 MiB mỗi ảnh. Lần
-nhận dạng đầu thường lâu hơn vì cần nạp model. Ảnh rõ nét, đủ sáng và không bị
-cắt chữ sẽ cho kết quả tốt hơn. Hãy kiểm tra lại dấu tiếng Việt, số tiền và mã số
-trước khi sử dụng kết quả.
-
-Với ảnh thực tế tiếng Việt, PaddleOCR tìm các vùng chữ, sau đó Tesseract đọc
-từng vùng. Với trang tài liệu, Tesseract đọc toàn trang. Bạn nên giữ bộ nhận dạng
-ở chế độ **Tự động**: model Latin đi kèm chưa có đủ ký tự tiếng Việt.
-
-Hiện dự án chưa hỗ trợ PDF. Tài liệu nhiều cột, bảng phức tạp và chữ viết tay
-chưa được xử lý đáng tin cậy. Bộ mẫu đi kèm là ảnh tạo bằng phần mềm, nên kết quả
-kiểm thử trên bộ này chưa phản ánh đầy đủ chất lượng với ảnh thực tế.
-
-## Gọi API
-
-Khi server đang chạy, mở [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-để xem các tham số và thử gửi ảnh trực tiếp.
-
-Ví dụ gửi ảnh từ PowerShell:
+From the repository root:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/v1/ocr?route=auto&lang=vie%2Beng" -F "file=@anh.png"
+$env:MODELS_DIR = (Resolve-Path .\models).Path
+$env:ALLOW_MODEL_DOWNLOAD = 'false'
+.\scripts\setup.ps1
 ```
 
-Thay `anh.png` bằng đường dẫn ảnh của bạn. API trả JSON có văn bản, các vùng chữ
-và thông tin xử lý. Nếu chỉ cần văn bản, dùng endpoint `/v1/ocr/text`.
+Setup creates `.venv311`, installs the application and test dependencies, and checks the environment. Run it again when the dependency files change. The server launcher does not install or update packages.
 
-Bạn có thể kiểm tra server qua `/health/live`. Endpoint `/health/ready` cho biết
-pipeline ảnh thực tế đã sẵn sàng hay chưa; trước lần nạp model đầu tiên, endpoint
-này có thể trả HTTP 503 dù server vẫn đang chạy.
+The bundled assets are:
 
-## Phát triển và kiểm thử
+| Asset | Location |
+| --- | --- |
+| PaddleOCR text detector | `models/official_models/PP-OCRv5_server_det/` |
+| PaddleOCR Latin recognizer | `models/official_models/latin_PP-OCRv5_mobile_rec/` |
 
-Mã ứng dụng nằm trong `app/`, tests trong `tests/`, còn `scripts/` chứa các lệnh
-cài đặt, chạy và kiểm tra. Thư mục `benchmarks/` cùng hai bộ `benchmark_data*`
-dùng để đánh giá OCR trên ảnh mẫu.
+Paths are relative to the repository root. The default Vietnamese scene pipeline needs the detector and Tesseract; the Latin recognizer is included for explicit Paddle recognition. Tesseract language files are managed by your Tesseract installation, outside these model directories.
 
-Sau khi setup và đặt `MODELS_DIR` như ở trên, chạy bộ kiểm thử bằng:
+## Extract text
+
+Open PowerShell in the project directory and start the server:
+
+```powershell
+$env:MODELS_DIR = (Resolve-Path .\models).Path
+$env:ALLOW_MODEL_DOWNLOAD = 'false'
+.\scripts\run_local.ps1
+```
+
+Set these environment variables again when using a new terminal. If you set `TESSERACT_CMD` during setup, set that variable again too. An existing `PADDLE_PDX_CACHE_HOME` takes precedence over `MODELS_DIR`; unset it if you want to use the bundled models instead of another cache.
+
+Once the server is listening, open **http://127.0.0.1:8000/** in your browser. Select an image, choose the language, and press the recognition button. Start with the automatic image type; try the document or scene option if the result is poor.
+
+The first request can take longer while the detector loads. When recognition finishes, review the text and use the copy or download controls. Check Vietnamese accents, amounts, dates, and identifiers before using the result elsewhere.
+
+Press **Ctrl+C** in the server terminal to stop the application. To use another port, start it with `-Port 8002`. You can add `-Warmup` to load and check the configured scene pipeline before the server begins accepting requests.
+
+## Use the API
+
+With the server running, open **http://127.0.0.1:8000/docs** to explore the endpoints and try requests from your browser.
+
+From PowerShell:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/v1/ocr?route=auto&lang=vie%2Beng" -F "file=@image.png"
+```
+
+Replace `image.png` with your image path. The response contains the recognized text, regions, warnings, and processing details. Use `/v1/ocr/text` for a plain text response. Set `route=document` or `route=scene` to choose a processing path explicitly.
+
+`/health/live` checks whether the process is running. `/health/ready` reports readiness for the default scene pipeline and also includes document readiness. It can return HTTP 503 before the scene model has loaded; checking health does not load the model itself.
+
+## Adjust the settings
+
+Set environment variables in the same terminal before starting the server. Runtime defaults are defined in `app/core/config.py`.
+
+| To change… | Set… |
+| --- | --- |
+| Model directory | `MODELS_DIR` |
+| Whether missing models may be downloaded | `ALLOW_MODEL_DOWNLOAD` |
+| Paddle CPU thread count | `CPU_THREADS` |
+| Maximum simultaneous OCR requests per process | `MAX_CONCURRENT_OCR` |
+| Maximum upload size in bytes | `MAX_UPLOAD_BYTES` |
+| Document preprocessing | `DOCUMENT_PREPROCESS` (`gray`, `original`, or `binary`) |
+
+Larger images, more text regions, and higher concurrency can increase memory use and processing time. Change one setting at a time and check the effect on both recognition quality and resource use.
+
+## Troubleshooting
+
+- **Python setup fails:** check that `py -3.11 --version` works. Use the project's `.venv311` environment rather than a different Python installation.
+- **Tesseract is unavailable:** check the executable path and confirm that both `vie` and `eng` language data are installed. Set `TESSERACT_CMD` if needed.
+- **Scene recognition reports a missing model:** check that `MODELS_DIR` points to the repository's `models` directory and that no older `PADDLE_PDX_CACHE_HOME` setting overrides it.
+- **The Latin engine rejects Vietnamese:** select Automatic or Paddle detection with Tesseract. The bundled Latin model does not contain all Vietnamese characters.
+- **The result is poor or empty:** try a sharper, well-lit image, crop to the relevant text, and select the image type yourself. Multi-column pages may need to be split into simpler sections.
+- **The server is busy or a request takes too long:** wait before retrying, or use a smaller crop. A browser timeout does not necessarily stop an OCR operation already running on the server.
+- **PowerShell blocks a script:** if you trust the checkout and your machine's policy permits it, launch that script in a separate process with `powershell -ExecutionPolicy Bypass -File .\scripts\run_local.ps1`.
+
+## Project layout
+
+```text
+OCR-Vie/
+├── app/                       # API, OCR pipeline, and browser interface
+├── models/official_models/    # Bundled PaddleOCR inference artifacts
+├── scripts/                   # Setup, launchers, checks, and performance tools
+├── tests/                     # Unit and integration tests
+├── benchmarks/                # Dataset and evaluation tools
+├── benchmark_data/            # Synthetic fixtures
+├── benchmark_data_quality_v2/ # Synthetic fixtures with revised annotations
+├── requirements.txt           # Base dependencies
+├── requirements-paddle.txt    # PaddleOCR dependencies
+├── requirements-dev.txt       # Test dependencies
+└── Dockerfile
+```
+
+Python environments, caches, private inputs, generated reports, and working notes are excluded from Git. A Dockerfile is included, but the container workflow has not yet been fully validated.
+
+## Tests and evaluation
+
+After setup, with `MODELS_DIR` set as above:
 
 ```powershell
 .\scripts\test.ps1
 ```
 
-Khi nhập ảnh thật để đánh giá, chỉ dùng dữ liệu bạn có quyền sử dụng. Giữ ảnh
-riêng tư trong `benchmark_incoming/` hoặc `data/`, không commit chúng lên Git.
-Chỉ dùng các mẫu đã được kiểm tra nhãn để kết luận về chất lượng; bộ lọc
-`--reviewed-only` hỗ trợ việc này trong các lệnh benchmark.
+The suite includes real-model integration tests. Node.js enables the JavaScript regression checks; those checks are skipped when Node is unavailable.
 
-## Model và giấy phép
+The two sample datasets contain 24 synthetic images in total. They help catch regressions but do not establish accuracy on real photographs or documents. For your own evaluation, use images you have permission to use, review their labels, and keep private inputs under `benchmark_incoming/` or `data/`. The benchmark commands support `--reviewed-only` to select reviewed samples.
 
-Hai model nằm tại `models/official_models`: `PP-OCRv5_server_det` để phát hiện
-chữ và `latin_PP-OCRv5_mobile_rec` để nhận dạng chữ Latin. Các file model được
-giữ nguyên từ PaddleOCR, kèm model card dưới tên `MODEL_CARD.txt`.
+Supported uploads are JPG, PNG, WebP, BMP, and TIFF, with a default limit of **10 MiB per image**. PDF input is not supported. Complex tables, multi-column reading order, and handwriting are not handled reliably by the current pipeline.
 
-Thông tin nguồn và giấy phép Apache-2.0 của model nằm trong
-[THIRD_PARTY_NOTICES.txt](models/THIRD_PARTY_NOTICES.txt) và
-[LICENSE-APACHE-2.0.txt](models/LICENSE-APACHE-2.0.txt). Giấy phép này áp dụng cho
-các thành phần PaddleOCR đi kèm; mã nguồn OCR-Vie chưa có giấy phép riêng.
+## Built with
 
-Repository giữ mã nguồn, tests, model và dữ liệu mẫu cần thiết. Môi trường Python,
-cache, kết quả chạy và tài liệu làm việc nội bộ được giữ ngoài Git. Dockerfile
-cũng có sẵn, nhưng quy trình chạy container chưa được kiểm thử đầy đủ.
+- **PaddleOCR** for text detection and optional Latin recognition.
+- **Tesseract** and **pytesseract** for Vietnamese and English recognition.
+- **OpenCV**, **NumPy**, and **Pillow** for image processing.
+- **FastAPI** and **Uvicorn** for the local server.
+- **HTML, CSS, and JavaScript** for the browser interface.
+
+The bundled PaddleOCR models retain their upstream model cards as `MODEL_CARD.txt`. Their Apache-2.0 license and attribution are included in [LICENSE-APACHE-2.0.txt](models/LICENSE-APACHE-2.0.txt) and [THIRD_PARTY_NOTICES.txt](models/THIRD_PARTY_NOTICES.txt). This license covers those third-party artifacts; OCR-Vie's own source code does not currently have a separate license.
